@@ -9,10 +9,161 @@ format:
      embed-resources: true
 ---
 
-## Intro
+## Description of the Data
+The dataset consists of over 500 fine-needle aspiration (FNA) samples.  For each sample, a technician outlined the nuclei from photographs and a software calculated ten characteristics.  Each sample includes the mean, standard error, and maximum of these ten features, resulting in 30 measurements per ID.  The datset includes an unique ID and a label that indicating whether the tissue mass is malignant (M) or benign (B).
 
-## Part A
-These are changes from the demo
+## Download the Data
+
+```{r}
+#install and load packages
+library(dplyr)
+library(tidyverse)
+library(ggplot2)
+library(corrplot)
+```
+
+```{r}
+# download the data, use ID as the row name
+FNA_cancer <- read.csv("/Users/ndds/Downloads/FNA_cancer.csv", row.names = 1)
+```
+
+## Exploratory Data Analysis
+```{r}
+# Inspect the data
+glimpse(FNA_cancer)
+```
+
+```{r}
+# review the NA's
+colSums(is.na(FNA_cancer))
+```
+
+```{r}
+#remove the column with all NA's
+FNA <- FNA_cancer %>%
+  select(-X)
+```
+
+```{r}
+# change diagnosis to factor
+FNA$diagnosis <- as.factor(FNA$diagnosis)
+```
+
+```{r}
+# create a dummy 1, 0 for diagnosis
+FNA <- FNA %>%
+  mutate(malignant = ifelse(diagnosis == "M", 1, 0))
+```
+
+```{r}
+correlation <- FNA %>%
+  select(where(is.numeric)) %>%
+  cor() %>%
+  .["malignant",] %>%
+  sort(decreasing = TRUE)
+
+correlation
+```
+
+```{r}
+# need to create a df for a facet wrap of histograms, use pivot longer
+pivot_df <- FNA %>%
+  pivot_longer(cols = where(is.numeric) & ! diagnosis & ! malignant, # make sure the response isn't choosen
+               names_to = "variable",
+               values_to = "values")
+```
+
+```{r}
+# plot the variables
+ggplot(pivot_df, aes(x=values, fill = diagnosis)) +
+  geom_histogram(position = "identity") + # overlay the diagnosis
+  facet_wrap(~variable, scales = "free_x") # allow x-axis to be independent of each other
+```
+
+```{r}
+# Review boxplot
+ggplot(pivot_df, aes(x = values, fill = diagnosis)) +
+  geom_boxplot()+
+  facet_wrap(~variable, scales = "free_x")
+```
+```{r}
+# create a mean dataframe
+FNA_sub.mean <- FNA %>%
+  select(diagnosis, radius_mean, texture_mean, perimeter_mean, area_mean, smoothness_mean, compactness_mean, concavity_mean, concave.points_mean, symmetry_mean, fractal_dimension_mean)
+
+# need to create a df for a facet wrap, using pivot longer
+pivot_mean <- FNA_sub.mean %>%
+  pivot_longer(cols = where(is.numeric) & ! diagnosis, # make sure the response isn't choosen
+               names_to = "variable",
+               values_to = "values")
+```
+
+```{r}
+# reviewing the mean data subset
+ggplot(pivot_mean, aes(x = values, y = diagnosis)) +
+  geom_violin()+
+  facet_wrap(~variable, scales = "free_x")
+```
+
+```{r}
+#mean
+numeric_cols.mean <- sapply(FNA_sub.mean, is.numeric)
+corrplot(cor(FNA_sub.mean[,numeric_cols.mean]), method = "circle")
+```
+
+```{r}
+# create a se dataframe
+FNA_sub.se <- FNA %>%
+  select(diagnosis, radius_se, texture_se, perimeter_se, area_se, smoothness_se, compactness_se, concavity_se, concave.points_se, symmetry_se, fractal_dimension_se)
+
+# need to create a df for a facet wrap, using pivot longer
+pivot_se <- FNA_sub.se %>%
+  pivot_longer(cols = where(is.numeric) & ! diagnosis, # make sure the response isn't choosen
+               names_to = "variable",
+               values_to = "values")
+```
+
+```{r}
+# reviewing the se data subset
+ggplot(pivot_mean, aes(x = values, y = diagnosis)) +
+  geom_violin()+
+  facet_wrap(~variable, scales = "free_x")
+```
+
+```{r}
+#se
+numeric_cols.se <- sapply(FNA_sub.se, is.numeric)
+corrplot(cor(FNA_sub.se[,numeric_cols.se]), method = "circle")
+```
+
+
+```{r}
+# create a 'worst' subset dataframe
+FNA_sub.worst <- FNA %>%
+  select(diagnosis, radius_worst, texture_worst, perimeter_worst, area_worst, smoothness_worst, compactness_worst, concavity_worst, concave.points_worst, symmetry_worst, fractal_dimension_worst, malignant)
+
+# need to create a df for a facet wrap, using pivot longer
+pivot_worst <- FNA_sub.worst %>%
+  pivot_longer(cols = where(is.numeric) & ! diagnosis & ! malignant, # make sure the response isn't choosen
+               names_to = "variable",
+               values_to = "values")
+```
+
+```{r}
+# reviewing the se data subset
+ggplot(pivot_worst, aes(x = values, y = diagnosis)) +
+  geom_violin()+
+  facet_wrap(~variable, scales = "free_x")
+```
+
+```{r}
+#worst
+numeric_cols.worst <- sapply(FNA_sub.worst, is.numeric)
+corrplot(cor(FNA_sub.worst[,numeric_cols.worst]), method = "circle")
+```
+
+
+
 ## Part B
 
 ## Part B
