@@ -164,6 +164,19 @@ corrplot(cor(FNA_sub.worst[,numeric_cols.worst]), method = "circle")
 
 #EDA ideas - Anthony 
 
+What are we doing? 
+We are building a product to improve diagnosis and classify Malignant and Benign tumors.
+
+What features or variables help predict or classify Malignant and Benign tumors?
+Can we use patterns? 
+Correlation? (corplots are above)
+Area, Radius, Concavity - 3 measurements for tumors
+Medical procedures - can we use measurements to predict? Do we use KNN? Decision Trees? Random Forests?
+We don't want to missclassify or misdiagnos 
+Accuracy is key, we DON'T WANT false negatives! That means we miss the diagnosis and the patient suffers. 
+
+Accuracy, Sensitivity, Specificity, Accuracy can help us get false negative ratios (we want these low as possible)
+
 ```{r}
 ggplot(FNA, aes(x=radius_mean, fill=diagnosis)) +
   geom_density(alpha = 0.5)
