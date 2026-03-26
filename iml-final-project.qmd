@@ -162,12 +162,43 @@ numeric_cols.worst <- sapply(FNA_sub.worst, is.numeric)
 corrplot(cor(FNA_sub.worst[,numeric_cols.worst]), method = "circle")
 ```
 
-#EDA ideas - Anthony - Testing how to use GitHub and add to the project 
+#EDA ideas - Anthony 
 
 ```{r}
 ggplot(FNA, aes(x=radius_mean, fill=diagnosis)) +
   geom_density(alpha = 0.5)
 #showing the clear separation between benign and malignant tumors
+```
+I chose Radius, Area, Concavity (3 measurements to identify the shape and size of tumors)
+
+```{r}
+#EDA ideas
+table(FNA$diagnosis)
+#Shows the balance of benign and malignant tumors
+```
+
+```{r}
+#EDA ideas
+prop.table(table(FNA$diagnosis))
+```
+
+```{r}
+#EDA ideas - these are plots by diagnosis
+hist(FNA$radius_mean, main="Radius Mean", col="lightblue")
+hist(FNA$area_mean, main="Area Mean", col="lightblue")
+hist(FNA$concavity_mean, main="Concavity Mean", col="lightblue")
+#these are all right skewed graphs; possibly due to malignant tumors having higher values 
+```
+
+```{r}
+boxplot(radius_mean ~ diagnosis, data=FNA, col=c("green","red"))
+boxplot(area_mean ~ diagnosis, data=FNA, col=c("green","red"))
+boxplot(concavity_mean ~ diagnosis, data=FNA, col=c("green","red"))
+#normal box plots of the same diagnosis using radius, area, concavity
+```
+
+```{r}
+boxplot(FNA$area_mean)
 ```
 
 ## Part B
