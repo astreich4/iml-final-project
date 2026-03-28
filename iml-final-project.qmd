@@ -24,7 +24,7 @@ library(corrplot)
 
 ```{r}
 # download the data, use ID as the row name
-FNA_cancer <- read.csv("/Users/ndds/Downloads/FNA_cancer.csv", row.names = 1)
+FNA_cancer <- read.csv("FNA_cancer.csv", row.names = 1)
 ```
 
 ## Exploratory Data Analysis
@@ -40,8 +40,7 @@ colSums(is.na(FNA_cancer))
 
 ```{r}
 #remove the column with all NA's
-FNA <- FNA_cancer %>%
-  select(-X)
+FNA <- FNA_cancer %>% dplyr::select(-X)
 ```
 
 ```{r}
@@ -55,136 +54,13 @@ FNA <- FNA %>%
   mutate(malignant = ifelse(diagnosis == "M", 1, 0))
 ```
 
-```{r}
-correlation <- FNA %>%
-  select(where(is.numeric)) %>%
-  cor() %>%
-  .["malignant",] %>%
-  sort(decreasing = TRUE)
 
-correlation
-```
-
-```{r}
-# need to create a df for a facet wrap of histograms, use pivot longer
-pivot_df <- FNA %>%
-  pivot_longer(cols = where(is.numeric) & ! diagnosis & ! malignant, # make sure the response isn't choosen
-               names_to = "variable",
-               values_to = "values")
-```
-
-```{r}
-# plot the variables
-ggplot(pivot_df, aes(x=values, fill = diagnosis)) +
-  geom_histogram(position = "identity") + # overlay the diagnosis
-  facet_wrap(~variable, scales = "free_x") # allow x-axis to be independent of each other
-```
-
-```{r}
-# Review boxplot
-ggplot(pivot_df, aes(x = values, fill = diagnosis)) +
-  geom_boxplot()+
-  facet_wrap(~variable, scales = "free_x")
-```
-```{r}
-# create a mean dataframe
-FNA_sub.mean <- FNA %>%
-  select(diagnosis, radius_mean, texture_mean, perimeter_mean, area_mean, smoothness_mean, compactness_mean, concavity_mean, concave.points_mean, symmetry_mean, fractal_dimension_mean)
-
-# need to create a df for a facet wrap, using pivot longer
-pivot_mean <- FNA_sub.mean %>%
-  pivot_longer(cols = where(is.numeric) & ! diagnosis, # make sure the response isn't choosen
-               names_to = "variable",
-               values_to = "values")
-```
-
-```{r}
-# reviewing the mean data subset
-ggplot(pivot_mean, aes(x = values, y = diagnosis)) +
-  geom_violin()+
-  facet_wrap(~variable, scales = "free_x")
-```
-
-```{r}
-#mean
-numeric_cols.mean <- sapply(FNA_sub.mean, is.numeric)
-corrplot(cor(FNA_sub.mean[,numeric_cols.mean]), method = "circle")
-```
-
-```{r}
-# create a se dataframe
-FNA_sub.se <- FNA %>%
-  select(diagnosis, radius_se, texture_se, perimeter_se, area_se, smoothness_se, compactness_se, concavity_se, concave.points_se, symmetry_se, fractal_dimension_se)
-
-# need to create a df for a facet wrap, using pivot longer
-pivot_se <- FNA_sub.se %>%
-  pivot_longer(cols = where(is.numeric) & ! diagnosis, # make sure the response isn't choosen
-               names_to = "variable",
-               values_to = "values")
-```
-
-```{r}
-# reviewing the se data subset
-ggplot(pivot_mean, aes(x = values, y = diagnosis)) +
-  geom_violin()+
-  facet_wrap(~variable, scales = "free_x")
-```
-
-```{r}
-#se
-numeric_cols.se <- sapply(FNA_sub.se, is.numeric)
-corrplot(cor(FNA_sub.se[,numeric_cols.se]), method = "circle")
-```
-
-
-```{r}
-# create a 'worst' subset dataframe
-FNA_sub.worst <- FNA %>%
-  select(diagnosis, radius_worst, texture_worst, perimeter_worst, area_worst, smoothness_worst, compactness_worst, concavity_worst, concave.points_worst, symmetry_worst, fractal_dimension_worst, malignant)
-
-# need to create a df for a facet wrap, using pivot longer
-pivot_worst <- FNA_sub.worst %>%
-  pivot_longer(cols = where(is.numeric) & ! diagnosis & ! malignant, # make sure the response isn't choosen
-               names_to = "variable",
-               values_to = "values")
-```
-
-```{r}
-# reviewing the se data subset
-ggplot(pivot_worst, aes(x = values, y = diagnosis)) +
-  geom_violin()+
-  facet_wrap(~variable, scales = "free_x")
-```
-
-```{r}
-#worst
-numeric_cols.worst <- sapply(FNA_sub.worst, is.numeric)
-corrplot(cor(FNA_sub.worst[,numeric_cols.worst]), method = "circle")
-```
-
-#EDA ideas - Anthony - Testing how to use GitHub and add to the project 
+# EDA ideas - Anthony - Testing how to use GitHub and add to the project 
 
 ```{r}
 ggplot(FNA, aes(x=radius_mean, fill=diagnosis)) +
   geom_density(alpha = 0.5)
 #showing the clear separation between benign and malignant tumors
-```
-
-## Part B
-
-## Download the Data
-
-```{r}
-#install and load packages
-library(dplyr)
-library(tidyverse)
-library(ggplot2)
-library(corrplot)
-```
-
-```{r}
-# download the data, use ID as the row name
-FNA_cancer <- read.csv("/Users/ndds/Downloads/FNA_cancer.csv", row.names = 1)
 ```
 
 ## Exploratory Data Analysis
@@ -196,36 +72,12 @@ FNA_cancer <- read.csv("/Users/ndds/Downloads/FNA_cancer.csv", row.names = 1)
 glimpse(FNA_cancer)
 ```
 
--   All data is numeric with a categorical variable for diagnosis and a logical variable for X.
-
-```{r}
-# review the NA's
-colSums(is.na(FNA_cancer))
-```
-
-```{r}
-#remove the column with all NA's (X), note the library MASS masks select
-FNA <- FNA_cancer %>%
-  select(- X)
-```
-
-```{r}
-# change diagnosis to factor for modeling
-FNA$diagnosis <- as.factor(FNA$diagnosis)
-```
-
-```{r}
-# For EDA, create a dummy 1, 0 for diagnosis
-FNA <- FNA %>%
-  mutate(malignant = ifelse(diagnosis == "M", 1, 0))
-```
-
 #### Correlation Analysis - Correlation of every variable to the variable malignant.
 
 ```{r}
 # Add a correlation analysis
 correlation <- FNA %>%
-  select(where(is.numeric)) %>%
+  dplyr::select(where(is.numeric)) %>%
   cor() %>% # create a correlation matrix
   .["malignant",] %>% # extract the malignant row to find the correlation of all variables to 'malignant' variable
   sort(decreasing = TRUE)
@@ -592,31 +444,35 @@ predk <- augment(new_data=FNA_test, final_fit)
 my_metrics(predk, truth= diagnosis, estimate = .pred_class)
 ```
 
-## Build a classification algorithm using logistic regression (adjust the model structure appropriately).
+## Build a classification algorithm using Logistic Regression (adjust the model structure appropriately).
 
-############## need to review more, this has issues
+### Identify Best Set of Predictors
 
--   Build a tidy models recipe that predicts diagnostics
+Due to multicollinearity being present we will use the Step AIC method to determine which subset of predictors from the full model will give the lowest AIC. We have also removed the standard error measurements as they are more suited as information about the mean measurement, not information about the cells themselves. We will use the model recommended by Step AIC for logistic regression.
 
+### Step AIC
 ```{r}
-#make a recipe
-log_recipe <- recipe(formula_FNA,data=FNA_train)
+formula_FNA_log <- as.formula(diagnosis ~ radius_mean + texture_mean + perimeter_mean + area_mean + smoothness_mean + compactness_mean + concavity_mean + concave.points_mean + symmetry_mean + fractal_dimension_mean + radius_worst + texture_worst +  perimeter_worst + area_worst + smoothness_worst + compactness_worst + concavity_worst +  concave.points_worst + symmetry_worst + fractal_dimension_worst)
+
+mod_full <- glm(formula_FNA_log,data = FNA, family = "binomial")
+
+stepAIC(mod_full)
 ```
 
-```{r}
-# preprocessing recipe
-log_recipe%>%
-  prep()%>% # 
-  bake(FNA_train)
 
-# covert hotel to numeric
-log_recipe <- log_recipe%>%
+We can see from the results that we will want a model that only has radius_mean, texture_mean, compactness_mean, concave.points_mean, area_worst, compactness_worst, and symmetry_worst.
+
+### Build Recipe, Model, and Workflow
+
+```{r}
+
+step_AIC_f <- as.formula(diagnosis ~ radius_mean + texture_mean + compactness_mean + 
+    concave.points_mean + area_worst + compactness_worst + symmetry_worst)
+
+#Build a tidy models recipe that predicts diagnostics
+log_recipe <- recipe(step_AIC_f,data=FNA_train) %>%
   step_normalize(all_numeric_predictors())
-```
 
--   Build a workflow to fit a logistic regression with your recipe
-
-```{r}
 #specify the model, logistic regression 
 log_reg <- logistic_reg() %>% 
   set_engine("glm") %>%
@@ -628,21 +484,22 @@ log_wf <- workflow() %>%
   add_recipe(log_recipe)
 ```
 
--   Extract the fit
+### Fit the Model
 
 ```{r}
 #fit the model
 my_fit <- fit(log_wf ,data=FNA_train)
-my_fit
-```
 
--   Provide a summary of the GLM object.
-
-```{r}
-# summary
+# extract the summary
 my_fit%>%
   extract_fit_engine()%>%
   summary()
 ```
 
 ## Create a comparison of the different models on appropriate criteria (accuracy, sensitivity, etc.)
+
+
+
+
+
+
