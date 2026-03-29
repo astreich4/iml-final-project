@@ -496,6 +496,16 @@ my_fit%>%
   summary()
 ```
 
+
+### Calculate Metrics
+```{r}
+preds_log <- my_fit%>%augment(new_data = FNA_test)
+preds_log %>% conf_mat(truth=diagnosis, estimate = .pred_class)
+my_metrics <- metric_set(accuracy,sensitivity,specificity)
+preds_log %>% my_metrics(truth=diagnosis, estimate = .pred_class)
+```
+
+
 ## Create a comparison of the different models on appropriate criteria (accuracy, sensitivity, etc.)
 
 
