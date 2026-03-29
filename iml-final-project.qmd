@@ -162,14 +162,194 @@ numeric_cols.worst <- sapply(FNA_sub.worst, is.numeric)
 corrplot(cor(FNA_sub.worst[,numeric_cols.worst]), method = "circle")
 ```
 
-#EDA ideas - Anthony - Testing how to use GitHub and add to the project 
+#EDA ideas - Anthony 
+
+What are we doing? 
+We are building a product to improve diagnosis and classify Malignant and Benign tumors.
+
+What features or variables help predict or classify Malignant and Benign tumors?
+Can we use patterns? 
+Correlation? (corplots are above)
+Area, Radius, Concavity - 3 measurements for tumors
+Medical procedures - can we use measurements to predict? Do we use KNN? Decision Trees? Random Forests?
+We don't want to missclassify or misdiagnos 
+Accuracy is key, we DON'T WANT false negatives! That means we miss the diagnosis and the patient suffers. 
+
+Accuracy, Sensitivity, Specificity, Accuracy can help us get false negative ratios (we want these low as possible)
 
 ```{r}
 ggplot(FNA, aes(x=radius_mean, fill=diagnosis)) +
   geom_density(alpha = 0.5)
 #showing the clear separation between benign and malignant tumors
 ```
+I chose Radius, Area, Concavity (3 measurements to identify the shape and size of tumors)
+
+```{r}
+#EDA ideas
+table(FNA$diagnosis)
+#Shows the balance of benign and malignant tumors
+```
+
+```{r}
+#EDA ideas
+prop.table(table(FNA$diagnosis))
+```
+
+```{r}
+#EDA ideas - these are plots by diagnosis
+hist(FNA$radius_mean, main="Radius Mean", col="lightblue")
+hist(FNA$area_mean, main="Area Mean", col="lightblue")
+hist(FNA$concavity_mean, main="Concavity Mean", col="lightblue")
+#these are all right skewed graphs; possibly due to malignant tumors having higher values 
+```
+
+```{r}
+boxplot(radius_mean ~ diagnosis, data=FNA, col=c("green","red"))
+boxplot(area_mean ~ diagnosis, data=FNA, col=c("green","red"))
+boxplot(concavity_mean ~ diagnosis, data=FNA, col=c("green","red"))
+#normal box plots of the same diagnosis using radius, area, concavity
+```
+
+```{r}
+boxplot(FNA$area_mean)
+```
 
 ## Part B
 
 ## Part B
+
+### I used the previous clean code to do the Trees and Forests; I don't 100% understand why my plot doesn't show the same output as the original; but we can work through it
+
+#### Train and Split for Trees
+
+```{r}
+n_AD <- nrow(FNA)
+set.seed(1842)
+Test_Index_AD <- sample.int(n_AD,
+                            size = round(0.2 * n_AD))
+```
+
+```{r}
+Train_FNA_AD <- FNA[-Test_Index_AD, ]
+Test_FNA <- FNA[Test_Index_AD, ]
+```
+
+```{r}
+Formula_FNA_Trees_AD <- as.formula(diagnosis ~ .)
+```
+
+### Decision Trees
+
+```{r}
+FNA_Tree_AD <- rpart(Formula_FNA_Trees_AD,
+                     data = Train_FNA_AD,
+                     method = "class")
+```
+
+```{r}
+FNA_Tree_AD
+```
+
+```{r}
+plot(as.party(FNA_Tree_AD))
+```
+
+**I do not know if pruning is necessary because I don't think there is overfitting with diagnosis.**
+
+### Predictions
+
+```{r}
+Tree_Predictions_AD <- predict(FNA_Tree_AD,
+                               newdata = Test_FNA,
+                               type = "class")
+```
+
+### Confusion Matrix
+
+```{r}
+Confusion_Tree_AD <- table(actual = Test_FNA$diagnosis,
+                           predicted = Tree_Predictions_AD)
+```
+
+```{r}
+Confusion_Tree_AD
+```
+
+### Accuracy
+
+```{r}
+Tree_Accurary_AD <- sum(diag(Confusion_Tree_AD)) / sum(Confusion_Tree_AD)
+```
+
+```{r}
+Tree_Accurary_AD
+```
+
+### Random Forests
+
+```{r}
+set.seed(1842)
+FNA_Forest_AD <- randomForest(Formula_FNA_Trees_AD,
+                              data = Train_FNA_AD,
+                              mtry = 3,
+                              ntree = 300,
+                              importance = TRUE)
+```
+
+```{r}
+FNA_Forest_AD
+```
+
+```{r}
+FNA_Forest_AD$err.rate[300,
+                       "OOB"]
+```
+
+### Variable Importance
+
+```{r}
+importance(FNA_Forest_AD)
+```
+
+### Variance Important Plot
+
+```{r}
+varImpPlot(FNA_Forest_AD)
+```
+
+### Predictions using forests
+
+```{r}
+Forest_Prediction_AD <- predict(FNA_Forest_AD,
+                                newdata = Test_FNA,
+                                type = "class")
+```
+
+```{r}
+Confusion_Forest_AD <- table(actual = Test_FNA$diagnosis,
+                             predicted = Forest_Prediction_AD)
+```
+
+```{r}
+Confusion_Forest_AD
+```
+
+### Accuracy of Forest
+
+```{r}
+Forest_Accuracy_AD <- sum(diag(Confusion_Forest_AD)) / sum(Confusion_Forest_AD)
+```
+
+```{r}
+Forest_Accuracy_AD
+```
+
+### Missclass Rate
+
+```{r}
+Forest_Missclass_AD <- 1 - Forest_Accuracy_AD
+```
+
+```{r}
+Forest_Missclass_AD
+```
