@@ -91,9 +91,8 @@ correlation # review
 # need to create a df for a facet wrap of histograms, use pivot longer
 pivot_df <- FNA %>%
   pivot_longer(cols = where(is.numeric) & ! diagnosis & ! malignant, # make sure the response isn't chosen
-  pivot_longer(cols = where(is.numeric) & ! diagnosis & ! malignant, # make sure the response isn't chosen
                names_to = "variable",
-               values_to = "values")
+               values_to = "values",)
 ```
 
 ```{r}
@@ -108,15 +107,14 @@ ggplot(pivot_df, aes(x=values, fill = diagnosis)) +
 ```{r}
 # Review boxplot
 ggplot(pivot_df, aes(x = values, fill = diagnosis)) +
-  geom_boxplot()+
-  facet_wrap(~variable, scales = "free_x")
+  geom_boxplot() + facet_wrap(~variable, scales = "free_x")
 ```
 
 
 ```{r}
 # create a mean subset dataframe for easier visuals to review
 FNA_sub.mean <- FNA %>%
-  select(diagnosis, radius_mean, texture_mean, perimeter_mean, area_mean, smoothness_mean, compactness_mean, concavity_mean, concave.points_mean, symmetry_mean, fractal_dimension_mean, malignant) # select all mean data
+  dplyr::select(diagnosis, radius_mean, texture_mean, perimeter_mean, area_mean, smoothness_mean, compactness_mean, concavity_mean, concave.points_mean, symmetry_mean, fractal_dimension_mean, malignant) # select all mean data
 
 # need to create a df for a facet wrap, using pivot longer
 pivot_mean <- FNA_sub.mean %>%
@@ -150,7 +148,7 @@ ggplot(pivot_mean, aes(x = values, fill = diagnosis)) +
 ```{r}
 # create a se subset dataframe
 FNA_sub.se <- FNA %>%
-  select(diagnosis, radius_se, texture_se, perimeter_se, area_se, smoothness_se, compactness_se, concavity_se, concave.points_se, symmetry_se, fractal_dimension_se, malignant)
+  dplyr::select(diagnosis, radius_se, texture_se, perimeter_se, area_se, smoothness_se, compactness_se, concavity_se, concave.points_se, symmetry_se, fractal_dimension_se, malignant)
 
 # need to create a df for a facet wrap, using pivot longer
 pivot_se <- FNA_sub.se %>%
@@ -177,11 +175,10 @@ corrplot(cor(FNA_sub.se[,numeric_cols.se]), method = "circle")
 ```{r}
 # create a 'worst' subset dataframe
 FNA_sub.worst <- FNA %>%
-  select(diagnosis, radius_worst, texture_worst, perimeter_worst, area_worst, smoothness_worst, compactness_worst, concavity_worst, concave.points_worst, symmetry_worst, fractal_dimension_worst, malignant)
+  dplyr::select(diagnosis, radius_worst, texture_worst, perimeter_worst, area_worst, smoothness_worst, compactness_worst, concavity_worst, concave.points_worst, symmetry_worst, fractal_dimension_worst, malignant)
 
 # need to create a df for a facet wrap, using pivot longer
 pivot_worst <- FNA_sub.worst %>%
-  pivot_longer(cols = where(is.numeric) & ! diagnosis & ! malignant, # make sure the response isn't chosen
   pivot_longer(cols = where(is.numeric) & ! diagnosis & ! malignant, # make sure the response isn't chosen
                names_to = "variable",
                values_to = "values")
