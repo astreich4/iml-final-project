@@ -217,3 +217,139 @@ boxplot(FNA$area_mean)
 ## Part B
 
 ## Part B
+
+### I used the previous clean code to do the Trees and Forests; I don't 100% understand why my plot doesn't show the same output as the original; but we can work through it
+
+#### Train and Split for Trees
+
+```{r}
+n_AD <- nrow(FNA)
+set.seed(1842)
+Test_Index_AD <- sample.int(n_AD,
+                            size = round(0.2 * n_AD))
+```
+
+```{r}
+Train_FNA_AD <- FNA[-Test_Index_AD, ]
+Test_FNA <- FNA[Test_Index_AD, ]
+```
+
+```{r}
+Formula_FNA_Trees_AD <- as.formula(diagnosis ~ .)
+```
+
+### Decision Trees
+
+```{r}
+FNA_Tree_AD <- rpart(Formula_FNA_Trees_AD,
+                     data = Train_FNA_AD,
+                     method = "class")
+```
+
+```{r}
+FNA_Tree_AD
+```
+
+```{r}
+plot(as.party(FNA_Tree_AD))
+```
+
+**I do not know if pruning is necessary because I don't think there is overfitting with diagnosis.**
+
+### Predictions
+
+```{r}
+Tree_Predictions_AD <- predict(FNA_Tree_AD,
+                               newdata = Test_FNA,
+                               type = "class")
+```
+
+### Confusion Matrix
+
+```{r}
+Confusion_Tree_AD <- table(actual = Test_FNA$diagnosis,
+                           predicted = Tree_Predictions_AD)
+```
+
+```{r}
+Confusion_Tree_AD
+```
+
+### Accuracy
+
+```{r}
+Tree_Accurary_AD <- sum(diag(Confusion_Tree_AD)) / sum(Confusion_Tree_AD)
+```
+
+```{r}
+Tree_Accurary_AD
+```
+
+### Random Forests
+
+```{r}
+set.seed(1842)
+FNA_Forest_AD <- randomForest(Formula_FNA_Trees_AD,
+                              data = Train_FNA_AD,
+                              mtry = 3,
+                              ntree = 300,
+                              importance = TRUE)
+```
+
+```{r}
+FNA_Forest_AD
+```
+
+```{r}
+FNA_Forest_AD$err.rate[300,
+                       "OOB"]
+```
+
+### Variable Importance
+
+```{r}
+importance(FNA_Forest_AD)
+```
+
+### Variance Important Plot
+
+```{r}
+varImpPlot(FNA_Forest_AD)
+```
+
+### Predictions using forests
+
+```{r}
+Forest_Prediction_AD <- predict(FNA_Forest_AD,
+                                newdata = Test_FNA,
+                                type = "class")
+```
+
+```{r}
+Confusion_Forest_AD <- table(actual = Test_FNA$diagnosis,
+                             predicted = Forest_Prediction_AD)
+```
+
+```{r}
+Confusion_Forest_AD
+```
+
+### Accuracy of Forest
+
+```{r}
+Forest_Accuracy_AD <- sum(diag(Confusion_Forest_AD)) / sum(Confusion_Forest_AD)
+```
+
+```{r}
+Forest_Accuracy_AD
+```
+
+### Missclass Rate
+
+```{r}
+Forest_Missclass_AD <- 1 - Forest_Accuracy_AD
+```
+
+```{r}
+Forest_Missclass_AD
+```
