@@ -425,56 +425,201 @@ plot(as.party(new_tree))
 
 ## Build a classification algorithm using random forests or bagging (adjust the parameters of the forest appropriately).
 
+## Build a classification algorithm using random forests or bagging (adjust the parameters of the forest appropriately).
+
+* Determine the length of predictors
 ```{r}
 p <- length(c("radius_mean", "texture_mean","perimeter_mean","area_mean", "smoothness_mean","compactness_mean","concavity_mean","concave.points_mean", "symmetry_mean","fractal_dimension_mean","radius_se","texture_se","perimeter_se", "area_se","smoothness_se","compactness_se","concavity_se","concave.points_se", "symmetry_se","fractal_dimension_se","radius_worst","texture_worst", "perimeter_worst","area_worst","smoothness_worst","compactness_worst", "concavity_worst","concave.points_worst", "symmetry_worst", "fractal_dimension_worst"))
 
 p
 ```
 
--   Model, mtry=5, ntree = 500
-
+* Review options for tree selection in random forest
 ```{r}
 # set seed for model reproducibility
 set.seed(1842)
 
-# m=p, ntree = 500
-forest_500 <- randomForest(formula_FNA, data = FNA_train, mtry=5, ntree=500)
+# review OOB error values for different tree sizes
+forest_choice <- randomForest(formula_FNA, data = FNA_train, ntree = 1000)
 
-#display model
-forest_500
+# plot
+plot(forest_choice)
+
+# review results
+forest_choice$err.rate[300,] # OOB error is slightly better than 500, but not stable around 300
+forest_choice$err.rate[500,]
+forest_choice$err.rate[800,] # OOB error is good and is very stable
+```
+* Based on the data above, the OOB error is slightly better than tree at 500, but not stable around tree at 300. The OOB error is better at 800 trees than 500 and is very stable.  Based on this analysis I will review trees at 500 and 800.
+
+* Set the recipe for Tidy Model Random Forest
+```{r}
+forest_rec <- recipe(formula_FNA,data=FNA_train)
 ```
 
+* Tidy Model setup, mtry = 5 (sqrt(30) for classifications) and trees = 500
 ```{r}
-#review the importance
-importance(forest_500)
-
-varImpPlot(forest_500, sort = TRUE)
+#fit a random forest to this data
+tidy_forest500 <- rand_forest(mtry = 5, trees=500)%>%
+  set_engine("randomForest")%>%
+  set_mode("classification")
 ```
 
--   Using the mtry = 5 model, predict the test data
-
+* Build workflow
 ```{r}
-#for reproducibility
+# Add recipe and model to workflow
+forest_wf500<- workflow() %>% 
+  add_recipe(forest_rec) %>% # add recipe
+  add_model(tidy_forest500)
+```
+
+* Fit the model
+```{r}
+#fit the model
 set.seed(1842)
-
-# use model to predict
-forest_pred<- predict(forest_500,newdata = FNA_test,"class")
+forest_fit500 <- fit(forest_wf500,data=FNA_train)
 ```
 
--   Create a confusion matrix, 0 = Not canceled. 1 = canceled.
+* Give the output of this model
+```{r}
+# the workflow and output
+forest_fit500
+```
 
 ```{r}
-#make a confusion matrix for the test data 
-confusion_mat_forest <- table(forest_pred,FNA_test$diagnosis)
-confusion_mat_forest
+# The summary
+forest_fit500 %>%
+  extract_fit_engine() %>%
+  importance()
 ```
-
--   Approximately 4.39% missclassified, which aligns with the OOB estimate error.
 
 ```{r}
-# missclassified
-1-sum(diag(confusion_mat_forest))/sum(confusion_mat_forest)
+# predict the test data for tree
+preds_forest500 <- forest_fit500 %>%
+  augment(new_data = FNA_test)
 ```
+
+```{r}
+# Confusion matrix and missclassified rate
+conf_mat(preds_forest500, truth = diagnosis, .pred_class)
+1-accuracy(preds_forest500, truth = diagnosis, .pred_class)$.estimate
+```
+* Approximately 4.39% miss-classified for the random forest model with 500 tree and mtry at 5.  
+
+```{r}
+# Additional metrics
+accuracy(preds_forest500, truth = diagnosis, .pred_class)
+sens(preds_forest500, truth = diagnosis, .pred_class)
+spec(preds_forest500, truth = diagnosis, .pred_class)
+roc_auc(preds_forest500, diagnosis, .pred_B)
+```
+
+* Try the 800 tree Random Forest Model - Tidy Model setup, mtry = 5 and trees = 800
+```{r}
+#fit a random forest to this data
+tidy_forest800 <- rand_forest(mtry = 5, trees=800)%>%
+  set_engine("randomForest")%>%
+  set_mode("classification")
+```
+
+* Build workflow
+```{r}
+# Add recipe and model to workflow
+forest_wf800<- workflow() %>% 
+  add_recipe(forest_rec) %>% # add recipe
+  add_model(tidy_forest800)
+```
+
+* Fit the model
+```{r}
+#fit the model
+set.seed(1842)
+forest_fit800 <- fit(forest_wf800,data=FNA_train)
+```
+
+* Give the output of this model
+```{r}
+# the workflow and output
+forest_fit800
+```
+
+```{r}
+# The summary
+forest_fit800 %>%
+  extract_fit_engine() %>%
+  importance()
+```
+
+```{r}
+# predict the test data for tree
+preds_forest800 <- forest_fit800 %>%
+  augment(new_data = FNA_test)
+```
+
+```{r}
+# Confusion matrix and missclassified rate
+conf_mat(preds_forest800, truth = diagnosis, .pred_class)
+1-accuracy(preds_forest800, truth = diagnosis, .pred_class)$.estimate
+```
+* Note - the missclassified rate is the same as the previous model at 4.39%.
+
+```{r}
+#metrics for RandomForest at 800 trees
+accuracy(preds_forest800, truth = diagnosis, .pred_class)
+sens(preds_forest800, truth = diagnosis, .pred_class)
+spec(preds_forest800, truth = diagnosis, .pred_class)
+roc_auc(preds_forest800, diagnosis, .pred_B)
+```
+
+* Review the Bagged model to tune mtry - Tidy Model setup, mtry = p and trees = 500
+```{r}
+#fit a random forest to this data
+tidy_forestBag <- rand_forest(mtry = p, trees=500)%>%
+  set_engine("randomForest")%>%
+  set_mode("classification")
+```
+
+* Build workflow
+```{r}
+# Add recipe and model to workflow
+forest_wfBag<- workflow() %>% 
+  add_recipe(forest_rec) %>% # add recipe
+  add_model(tidy_forestBag)
+```
+
+* Fit the model
+```{r}
+#fit the model
+set.seed(1842)
+forest_fitBag <- fit(forest_wfBag,data=FNA_train)
+```
+
+* Give the output of this model
+```{r}
+# the workflow and output
+forest_fitBag
+```
+ *  OOB estimate of  error rate: 4.18% for the bag model compared to OOB estimate of  error rate: 3.74% for ntrees at 500, mtry = 5.  The performance is better with mtry at 5, which could indicate there are highly correlated predictors.  I would use mtry = 5 for my random forest model.
+
+
+```{r}
+# create a ROC for the two models
+roc_forest500 <- roc_curve(preds_forest500, diagnosis, .pred_B)
+
+roc_forest800 <- roc_curve(preds_forest800, diagnosis, .pred_B)
+```
+
+```{r}
+ggplot(data=roc_forest500,aes(x=1-specificity,y=sensitivity,color="Random Forest Model, 500 Trees"))+
+  geom_path()+
+  geom_abline(color="black")+
+  coord_equal() +
+  geom_path(data=roc_forest800,aes(x=1-specificity,y=sensitivity,color="Random Forest Model, 800 Trees"))
+```
+
+Based on the analysis above, models with 500 and 800 trees (both with mtry as 5) produce the same accuracy and missclassification rate.  Since increasing the number of trees did not improve performance, the model with mtry = 5 and trees = 500 is preferable.  This will help reduce the complexity of the model and decrease the likelihood of overfitting.
+
+
 
 ## Build a classification algorithm using K-Nearest Neighbors (tune the value of K appropriately)
 
