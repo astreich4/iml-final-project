@@ -91,6 +91,7 @@ correlation # review
 # need to create a df for a facet wrap of histograms, use pivot longer
 pivot_df <- FNA %>%
   pivot_longer(cols = where(is.numeric) & ! diagnosis & ! malignant, # make sure the response isn't chosen
+  pivot_longer(cols = where(is.numeric) & ! diagnosis & ! malignant, # make sure the response isn't chosen
                names_to = "variable",
                values_to = "values")
 ```
@@ -110,6 +111,7 @@ ggplot(pivot_df, aes(x = values, fill = diagnosis)) +
   geom_boxplot()+
   facet_wrap(~variable, scales = "free_x")
 ```
+
 
 ```{r}
 # create a mean subset dataframe for easier visuals to review
@@ -179,6 +181,7 @@ FNA_sub.worst <- FNA %>%
 
 # need to create a df for a facet wrap, using pivot longer
 pivot_worst <- FNA_sub.worst %>%
+  pivot_longer(cols = where(is.numeric) & ! diagnosis & ! malignant, # make sure the response isn't chosen
   pivot_longer(cols = where(is.numeric) & ! diagnosis & ! malignant, # make sure the response isn't chosen
                names_to = "variable",
                values_to = "values")
