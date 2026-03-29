@@ -68,7 +68,7 @@ correlation
 ```{r}
 # need to create a df for a facet wrap of histograms, use pivot longer
 pivot_df <- FNA %>%
-  pivot_longer(cols = where(is.numeric) & ! diagnosis & ! malignant, # make sure the response isn't choosen
+  pivot_longer(cols = where(is.numeric) & ! diagnosis & ! malignant, # make sure the response isn't chosen
                names_to = "variable",
                values_to = "values")
 ```
@@ -86,6 +86,7 @@ ggplot(pivot_df, aes(x = values, fill = diagnosis)) +
   geom_boxplot()+
   facet_wrap(~variable, scales = "free_x")
 ```
+
 ```{r}
 # create a mean dataframe
 FNA_sub.mean <- FNA %>%
@@ -93,7 +94,7 @@ FNA_sub.mean <- FNA %>%
 
 # need to create a df for a facet wrap, using pivot longer
 pivot_mean <- FNA_sub.mean %>%
-  pivot_longer(cols = where(is.numeric) & ! diagnosis, # make sure the response isn't choosen
+  pivot_longer(cols = where(is.numeric) & ! diagnosis, # make sure the response isn't chosen
                names_to = "variable",
                values_to = "values")
 ```
@@ -144,7 +145,7 @@ FNA_sub.worst <- FNA %>%
 
 # need to create a df for a facet wrap, using pivot longer
 pivot_worst <- FNA_sub.worst %>%
-  pivot_longer(cols = where(is.numeric) & ! diagnosis & ! malignant, # make sure the response isn't choosen
+  pivot_longer(cols = where(is.numeric) & ! diagnosis & ! malignant, # make sure the response isn't chosen
                names_to = "variable",
                values_to = "values")
 ```
@@ -170,6 +171,662 @@ ggplot(FNA, aes(x=radius_mean, fill=diagnosis)) +
 #showing the clear separation between benign and malignant tumors
 ```
 
-## Part B
+## Download the Data
 
-## Part B
+```{r}
+#install and load packages
+library(dplyr)
+library(tidyverse)
+library(ggplot2)
+library(corrplot)
+```
+
+```{r}
+# download the data, use ID as the row name
+FNA_cancer <- read.csv("/Users/ndds/Downloads/FNA_cancer.csv", row.names = 1)
+```
+
+## Exploratory Data Analysis
+
+#### Inspect and tidy the data
+
+```{r}
+# Inspect the data
+glimpse(FNA_cancer)
+```
+
+-   All data is numeric with a categorical variable for diagnosis and a logical variable for X.
+
+```{r}
+# review the NA's
+colSums(is.na(FNA_cancer))
+```
+
+```{r}
+#remove the column with all NA's (X), note the library MASS masks select
+FNA <- FNA_cancer %>%
+  select(- X)
+```
+
+```{r}
+# change diagnosis to factor for modeling
+FNA$diagnosis <- as.factor(FNA$diagnosis)
+```
+
+```{r}
+# For EDA, create a dummy 1, 0 for diagnosis
+FNA <- FNA %>%
+  mutate(malignant = ifelse(diagnosis == "M", 1, 0))
+```
+
+#### Correlation Analysis - Correlation of every variable to the variable malignant.
+
+```{r}
+# Add a correlation analysis
+correlation <- FNA %>%
+  select(where(is.numeric)) %>%
+  cor() %>% # create a correlation matrix
+  .["malignant",] %>% # extract the malignant row to find the correlation of all variables to 'malignant' variable
+  sort(decreasing = TRUE)
+
+correlation # review
+```
+
+-   From the correlation data as it relates to the 'malignant' hot-one encode key, we can see evidence of various strongly correlated predictor variables.
+
+```{r}
+# need to create a df for a facet wrap of histograms, use pivot longer
+pivot_df <- FNA %>%
+  pivot_longer(cols = where(is.numeric) & ! diagnosis & ! malignant, # make sure the response isn't chosen
+               names_to = "variable",
+               values_to = "values")
+```
+
+```{r}
+# plot the variables
+ggplot(pivot_df, aes(x=values, fill = diagnosis)) +
+  geom_histogram(position = "identity", bins = 30) + # overlay the diagnosis
+  facet_wrap(~variable, scales = "free") # allow x-axis to be independent of each other
+```
+
+-   Based on the histograms, some there appears to be better separation with some predictor variables. For example,
+
+```{r}
+# Review boxplot
+ggplot(pivot_df, aes(x = values, fill = diagnosis)) +
+  geom_boxplot()+
+  facet_wrap(~variable, scales = "free_x")
+```
+
+```{r}
+# create a mean subset dataframe for easier visuals to review
+FNA_sub.mean <- FNA %>%
+  select(diagnosis, radius_mean, texture_mean, perimeter_mean, area_mean, smoothness_mean, compactness_mean, concavity_mean, concave.points_mean, symmetry_mean, fractal_dimension_mean, malignant) # select all mean data
+
+# need to create a df for a facet wrap, using pivot longer
+pivot_mean <- FNA_sub.mean %>%
+  pivot_longer(cols = where(is.numeric) & ! diagnosis & ! malignant, # make sure the response isn't chosen
+               names_to = "variable",
+               values_to = "values")
+```
+
+```{r}
+# reviewing the mean data subset
+ggplot(pivot_mean, aes(x = values, y = diagnosis, fill = diagnosis)) +
+  geom_violin()+ # add violinplot
+  geom_boxplot(width = 0.2, outlier.shape = NA)+ # overlay a boxplot
+  facet_wrap(~variable, scales = "free") +
+  theme(legend.position = "none") # no need for legend
+```
+
+```{r}
+#mean subset correlation plot
+numeric_cols.mean <- sapply(FNA_sub.mean, is.numeric)
+corrplot(cor(FNA_sub.mean[,numeric_cols.mean]), method = "circle")
+```
+
+```{r}
+# reviewing the mean data subset histograms
+ggplot(pivot_mean, aes(x = values, fill = diagnosis)) +
+  geom_histogram(bins = 40)+
+  facet_wrap(~variable, scales = "free")
+```
+
+```{r}
+# review a density plot
+ggplot(pivot_mean, aes(x=values, fill=diagnosis)) +
+  geom_density() +
+  facet_wrap(~variable, scales = "free")
+
+#showing the separation between benign and malignant tumors
+```
+
+```{r}
+# create a se subset dataframe
+FNA_sub.se <- FNA %>%
+  select(diagnosis, radius_se, texture_se, perimeter_se, area_se, smoothness_se, compactness_se, concavity_se, concave.points_se, symmetry_se, fractal_dimension_se, malignant)
+
+# need to create a df for a facet wrap, using pivot longer
+pivot_se <- FNA_sub.se %>%
+  pivot_longer(cols = where(is.numeric) & ! diagnosis & ! malignant, # make sure the response isn't choosen
+               names_to = "variable",
+               values_to = "values")
+```
+
+```{r}
+# reviewing the se data subset
+ggplot(pivot_se, aes(x = values, y = diagnosis, fill = diagnosis)) +
+  geom_violin()+
+  geom_boxplot(width = 0.2, outlier.shape = NA)+ # overlay a boxplot
+  facet_wrap(~variable, scales = "free") +
+  theme(legend.position = "none") # no need for legend
+```
+
+```{r}
+#se subset correlation plot
+numeric_cols.se <- sapply(FNA_sub.se, is.numeric)
+corrplot(cor(FNA_sub.se[,numeric_cols.se]), method = "circle")
+```
+
+```{r}
+# reviewing the se data subset histograms
+ggplot(pivot_se, aes(x = values, fill = diagnosis)) +
+  geom_histogram(bins = 40)+
+  facet_wrap(~variable, scales = "free")
+```
+
+```{r}
+# review a density plot for the se subset
+ggplot(pivot_se, aes(x=values, fill=diagnosis)) +
+  geom_density() +
+  facet_wrap(~variable, scales = "free")
+
+#showing the separation between benign and malignant tumors
+```
+
+
+```{r}
+# create a 'worst' subset dataframe
+FNA_sub.worst <- FNA %>%
+  select(diagnosis, radius_worst, texture_worst, perimeter_worst, area_worst, smoothness_worst, compactness_worst, concavity_worst, concave.points_worst, symmetry_worst, fractal_dimension_worst, malignant)
+
+# need to create a df for a facet wrap, using pivot longer
+pivot_worst <- FNA_sub.worst %>%
+  pivot_longer(cols = where(is.numeric) & ! diagnosis & ! malignant, # make sure the response isn't chosen
+               names_to = "variable",
+               values_to = "values")
+```
+
+```{r}
+# reviewing the worst data subset
+ggplot(pivot_worst, aes(x = values, y = diagnosis, fill = diagnosis)) +
+  geom_violin()+
+  geom_boxplot(width = 0.2, outlier.shape = NA)+ # overlay a boxplot
+  facet_wrap(~variable, scales = "free")
+```
+
+```{r}
+#worst subset correlation plot
+numeric_cols.worst <- sapply(FNA_sub.worst, is.numeric)
+corrplot(cor(FNA_sub.worst[,numeric_cols.worst]), method = "circle")
+```
+
+```{r}
+# reviewing the worst data subset histograms
+ggplot(pivot_worst, aes(x = values, fill = diagnosis)) +
+  geom_histogram(bins = 40)+
+  facet_wrap(~variable, scales = "free")
+```
+
+```{r}
+# review a density plot for the worst subset
+ggplot(pivot_worst, aes(x=values, fill=diagnosis)) +
+  geom_density() +
+  facet_wrap(~variable, scales = "free")
+
+#showing the separation between benign and malignant tumors
+```
+
+
+```{r}
+#install and load packages
+library(rpart)
+library(partykit)
+library(tidymodels)
+library(randomForest)
+library(yardstick)
+```
+
+## Split the data into test and training data sets
+
+-   Divide the data into a training and a test set. Glimpse the training data.
+
+```{r}
+set.seed(1842) # set the seed to 1842
+
+# split the data
+FNA_split <- initial_split(FNA,prop=0.8)
+
+# create the training and test data set
+FNA_train <- training(FNA_split)
+FNA_test <- testing(FNA_split)
+
+# review the training data
+glimpse(FNA_train)
+```
+
+```{r}
+# set a formula
+formula_FNA <- as.formula(diagnosis ~ radius_mean + texture_mean + perimeter_mean + area_mean + smoothness_mean + compactness_mean + concavity_mean + concave.points_mean + symmetry_mean + fractal_dimension_mean + radius_se + texture_se + perimeter_se + area_se + smoothness_se + compactness_se + concavity_se + concave.points_se + symmetry_se + fractal_dimension_se + radius_worst + texture_worst +  perimeter_worst + area_worst + smoothness_worst + compactness_worst + concavity_worst +  concave.points_worst + symmetry_worst + fractal_dimension_worst)
+```
+
+## Build a classification algorithm using decision trees (prune your tree appropriately)
+
+```{r}
+#create a decision tree from the training data set
+FNA_Dtree <- rpart(formula_FNA ,data=FNA_train, method = "class")
+FNA_Dtree
+```
+
+```{r}
+# plot the tree
+plot(as.party(FNA_Dtree))
+```
+
+```{r}
+#Calculate the predictions for the test data
+FNA_test$preds <- predict(FNA_Dtree,newdata = FNA_test, type = "class")
+
+confusion_dTree <- table(FNA_test$diagnosis,FNA_test$preds, 
+                   dnn=c("actual", "predicted"))
+confusion_dTree
+```
+
+```{r}
+# calculate the accuracy
+accuracy_tree <- sum(diag(confusion_dTree))/sum(confusion_dTree)
+accuracy_tree * 100 # for percentage
+```
+
+```{r}
+#verifying improvement
+printcp(FNA_Dtree) # cross validation error is the best at nplit 4.
+```
+
+```{r}
+# review cp plot
+plotcp(FNA_Dtree)
+```
+
+```{r}
+# lowest xerror has a cp = 0.01, a prune tree using cp=0.01 will not change anything
+new_tree = rpart::prune(FNA_Dtree, cp = 0.01)
+# plot the tree
+plot(as.party(new_tree))
+```
+
+## Build a classification algorithm using random forests or bagging (adjust the parameters of the forest appropriately).
+
+* Determine the length of predictors
+```{r}
+p <- length(c("radius_mean", "texture_mean","perimeter_mean","area_mean", "smoothness_mean","compactness_mean","concavity_mean","concave.points_mean", "symmetry_mean","fractal_dimension_mean","radius_se","texture_se","perimeter_se", "area_se","smoothness_se","compactness_se","concavity_se","concave.points_se", "symmetry_se","fractal_dimension_se","radius_worst","texture_worst", "perimeter_worst","area_worst","smoothness_worst","compactness_worst", "concavity_worst","concave.points_worst", "symmetry_worst", "fractal_dimension_worst"))
+
+p
+```
+
+* Review options for tree selection in random forest
+```{r}
+# set seed for model reproducibility
+set.seed(1842)
+
+# review OOB error values for different tree sizes
+forest_choice <- randomForest(formula_FNA, data = FNA_train, ntree = 1000)
+
+# plot
+plot(forest_choice)
+
+# review results
+forest_choice$err.rate[300,] # OOB error is slightly better than 500, but not stable around 300
+forest_choice$err.rate[500,]
+forest_choice$err.rate[800,] # OOB error is good and is very stable
+```
+* Based on the data above, the OOB error is slightly better than tree at 500, but not stable around tree at 300. The OOB error is better at 800 trees than 500 and is very stable.  Based on this analysis I will review trees at 500 and 800.
+
+* Set the recipe for Tidy Model Random Forest
+```{r}
+forest_rec <- recipe(formula_FNA,data=FNA_train)
+```
+
+* Tidy Model setup, mtry = 5 (sqrt(30) for classifications) and trees = 500
+```{r}
+#fit a random forest to this data
+tidy_forest500 <- rand_forest(mtry = 5, trees=500)%>%
+  set_engine("randomForest")%>%
+  set_mode("classification")
+```
+
+* Build workflow
+```{r}
+# Add recipe and model to workflow
+forest_wf500<- workflow() %>% 
+  add_recipe(forest_rec) %>% # add recipe
+  add_model(tidy_forest500)
+```
+
+* Fit the model
+```{r}
+#fit the model
+set.seed(1842)
+forest_fit500 <- fit(forest_wf500,data=FNA_train)
+```
+
+* Give the output of this model
+```{r}
+# the workflow and output
+forest_fit500
+```
+
+```{r}
+# The summary
+forest_fit500 %>%
+  extract_fit_engine() %>%
+  importance()
+```
+
+```{r}
+# predict the test data for tree
+preds_forest500 <- forest_fit500 %>%
+  augment(new_data = FNA_test)
+```
+
+```{r}
+# Confusion matrix and missclassified rate
+conf_mat(preds_forest500, truth = diagnosis, .pred_class)
+1-accuracy(preds_forest500, truth = diagnosis, .pred_class)$.estimate
+```
+* Approximately 4.39% miss-classified for the random forest model with 500 tree and mtry at 5.  
+
+```{r}
+# Additional metrics
+accuracy(preds_forest500, truth = diagnosis, .pred_class)
+sens(preds_forest500, truth = diagnosis, .pred_class)
+spec(preds_forest500, truth = diagnosis, .pred_class)
+roc_auc(preds_forest500, diagnosis, .pred_B)
+```
+
+* Try the 800 tree Random Forest Model - Tidy Model setup, mtry = 5 and trees = 800
+```{r}
+#fit a random forest to this data
+tidy_forest800 <- rand_forest(mtry = 5, trees=800)%>%
+  set_engine("randomForest")%>%
+  set_mode("classification")
+```
+
+* Build workflow
+```{r}
+# Add recipe and model to workflow
+forest_wf800<- workflow() %>% 
+  add_recipe(forest_rec) %>% # add recipe
+  add_model(tidy_forest800)
+```
+
+* Fit the model
+```{r}
+#fit the model
+set.seed(1842)
+forest_fit800 <- fit(forest_wf800,data=FNA_train)
+```
+
+* Give the output of this model
+```{r}
+# the workflow and output
+forest_fit800
+```
+
+```{r}
+# The summary
+forest_fit800 %>%
+  extract_fit_engine() %>%
+  importance()
+```
+
+```{r}
+# predict the test data for tree
+preds_forest800 <- forest_fit800 %>%
+  augment(new_data = FNA_test)
+```
+
+```{r}
+# Confusion matrix and missclassified rate
+conf_mat(preds_forest800, truth = diagnosis, .pred_class)
+1-accuracy(preds_forest800, truth = diagnosis, .pred_class)$.estimate
+```
+* Note - the missclassified rate is the same as the previous model at 4.39%.
+
+```{r}
+#metrics for RandomForest at 800 trees
+accuracy(preds_forest800, truth = diagnosis, .pred_class)
+sens(preds_forest800, truth = diagnosis, .pred_class)
+spec(preds_forest800, truth = diagnosis, .pred_class)
+roc_auc(preds_forest800, diagnosis, .pred_B)
+```
+
+* Review the Bagged model to tune mtry - Tidy Model setup, mtry = p and trees = 500
+```{r}
+#fit a random forest to this data
+tidy_forestBag <- rand_forest(mtry = p, trees=500)%>%
+  set_engine("randomForest")%>%
+  set_mode("classification")
+```
+
+* Build workflow
+```{r}
+# Add recipe and model to workflow
+forest_wfBag<- workflow() %>% 
+  add_recipe(forest_rec) %>% # add recipe
+  add_model(tidy_forestBag)
+```
+
+* Fit the model
+```{r}
+#fit the model
+set.seed(1842)
+forest_fitBag <- fit(forest_wfBag,data=FNA_train)
+```
+
+* Give the output of this model
+```{r}
+# the workflow and output
+forest_fitBag
+```
+ *  OOB estimate of  error rate: 4.18% for the bag model compared to OOB estimate of  error rate: 3.74% for ntrees at 500, mtry = 5.  The performance is better with mtry at 5, which could indicate there are highly correlated predictors.  I would use mtry = 5 for my random forest model.
+
+
+```{r}
+# create a ROC for the two models
+roc_forest500 <- roc_curve(preds_forest500, diagnosis, .pred_B)
+
+roc_forest800 <- roc_curve(preds_forest800, diagnosis, .pred_B)
+```
+
+```{r}
+ggplot(data=roc_forest500,aes(x=1-specificity,y=sensitivity,color="Random Forest Model, 500 Trees"))+
+  geom_path()+
+  geom_abline(color="black")+
+  coord_equal() +
+  geom_path(data=roc_forest800,aes(x=1-specificity,y=sensitivity,color="Random Forest Model, 800 Trees"))
+```
+
+Based on the analysis above, models with 500 and 800 trees (both with mtry as 5) produce the same accuracy and missclassification rate.  Since increasing the number of trees did not improve performance, the model with mtry = 5 and trees = 500 is preferable.  This will help reduce the complexity of the model and decrease the likelihood of overfitting.
+
+
+## Build a classification algorithm using K-Nearest Neighbors (tune the value of K appropriately)
+
+-   Create the recipe from the formula and training data
+
+```{r}
+knn_recipe <- recipe(formula_FNA,data=FNA_train)
+```
+
+```{r}
+# preprocessing recipe
+knn_recipe%>%
+  prep()%>% # 
+  bake(FNA_train)
+
+# covert hotel to numeric
+knn_recipe <- knn_recipe%>%
+  step_range(all_numeric_predictors(),min=0,max=1)
+```
+
+```{r}
+# review the data
+knn_prep <- prep(knn_recipe)
+
+bake(knn_prep, new_data = NULL)
+```
+
+-   Create the 5 fold cross validation
+
+```{r}
+# Create the folds
+set.seed(1842)
+
+my_fold <- vfold_cv(FNA_train, v=5)
+```
+
+-   Tune the model, set the hyperparameters to tune
+
+```{r}
+# using tune(), set neighbors to tune
+knn_tune <- nearest_neighbor(neighbors = tune()) %>%
+  set_engine("kknn")%>%
+  set_mode("classification")
+```
+
+-   Add tune to workflow
+
+```{r}
+# Add tunable model to workflow
+wf_knn_tune <- workflow() %>% 
+  add_recipe(knn_recipe) %>%
+  add_model(knn_tune)
+```
+
+-   Create a grid of k = 3, 5, 7
+
+```{r}
+# k equal to 3, 5, and 7
+grid_knn <- tibble(neighbors = c(3,5,7))
+```
+
+-   Tune a grid, add accuracy, specificity and sensitivity metrics
+
+```{r}
+library(yardstick)
+# tune
+tuned <- tune_grid(wf_knn_tune, 
+                   resamples = my_fold, # 5 fold x-validation
+                   grid = grid_knn, # add grid for k = 3, 5, 7
+                   metrics = metric_set(accuracy, sens, spec)) # add specified metrics
+
+```
+
+-   Display collection metrics for k = 3, 5, 7
+
+```{r}
+# review the metrics
+collect_metrics(tuned)
+```
+
+-   Identify the best k based on accuracy
+
+```{r}
+# find the best k based on accuracy
+best_k <-select_best(tuned, metric = "accuracy")
+best_k
+```
+
+-   Use the best k from above to set in the final workflow and fit
+
+```{r}
+# set the k at the best identified k
+final_wf_knn <- finalize_workflow(wf_knn_tune, best_k)
+
+final_fit <- fit(final_wf_knn, data = FNA_train)
+```
+
+-   Provide a confusion matrix
+
+```{r}
+augment(new_data=FNA_test, final_fit) %>%
+  conf_mat(truth = diagnosis, estimate = .pred_class)
+```
+
+-   Provide accuracy, sensitivity, and specificity for this prediction
+
+```{r}
+# set the metrics
+my_metrics <- metric_set(accuracy, sens, spec)
+
+# list the predictions
+predk <- augment(new_data=FNA_test, final_fit) 
+
+# Provide the tibble
+my_metrics(predk, truth= diagnosis, estimate = .pred_class)
+```
+
+## Build a classification algorithm using logistic regression (adjust the model structure appropriately).
+
+############## need to review more, this has issues
+
+-   Build a tidy models recipe that predicts diagnostics
+
+```{r}
+#make a recipe
+log_recipe <- recipe(formula_FNA,data=FNA_train)
+```
+
+```{r}
+# preprocessing recipe
+log_recipe%>%
+  prep()%>% # 
+  bake(FNA_train)
+
+# covert hotel to numeric
+log_recipe <- log_recipe%>%
+  step_normalize(all_numeric_predictors())
+```
+
+-   Build a workflow to fit a logistic regression with your recipe
+
+```{r}
+#specify the model, logistic regression 
+log_reg <- logistic_reg() %>% 
+  set_engine("glm") %>%
+  set_mode("classification")
+
+# combine in a Workflow
+log_wf <- workflow() %>%
+  add_model(log_reg)%>%
+  add_recipe(log_recipe)
+```
+
+-   Extract the fit
+
+```{r}
+#fit the model
+my_fit <- fit(log_wf ,data=FNA_train)
+my_fit
+```
+
+-   Provide a summary of the GLM object.
+
+```{r}
+# summary
+my_fit%>%
+  extract_fit_engine()%>%
+  summary()
+```
+
+## Create a comparison of the different models on appropriate criteria (accuracy, sensitivity, etc.)
